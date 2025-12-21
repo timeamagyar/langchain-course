@@ -3,36 +3,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 from langchain_tavily import TavilySearch
+from pydantic import BaseModel, Field
+from typing import List
 
-from schemas import AgentResponse
+class Source(BaseModel):
+    """Schema for a source used by an agent """
+    url: str = Field(description="Source URL")
 
-tools = [TavilySearch()]
-llm = ChatOpenAI(model="gpt-4o")
+class AgentResponse(BaseModel):
+    """Schema for an agent response with answer and source"""
+    answer: str = Field(description="The agent's final answer to the quer")
+    sources: List[Source] = Field(default_factory=list, description="List of sources used by the agent to answer the question")
 
-
-agent = create_agent(
-    model=llm,
-    tools=tools,
-    response_format=AgentResponse,
-)
-
+llm = ChatOpenAI()
+tools = [TavilySearch]
+agent  = create_agent(model=llm, tools=tools, response_format=AgentResponse)
 
 def main():
-    result = agent.invoke(
-        {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "search for 3 job postings for an ai engineer using langchain in the bay area on linkedin and list their details",
-                }
-            ]
-        }
-    )
-    # Access structured response from the agent
-    structured = result.get("structured_response", None)
-    print(structured if structured is not None else result)
+    result = agent.invoke({"messages": HumanMessage(content="Search for three AI Engineer jobs in Munich, Germany on linkedin and list three postings.")})
+    print(result)
 
 
 if __name__ == "__main__":
